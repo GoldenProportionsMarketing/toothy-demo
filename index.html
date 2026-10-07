@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Toothy: concept demo</title>
+<style>
+  /* the two typefaces the app uses, served from beside this page (fonts/) */
+  @font-face { font-family: 'Oswald'; font-style: normal; font-weight: 200 700; font-display: swap; src: url(fonts/oswald-latin.woff2) format('woff2'); }
+  @font-face { font-family: 'Roboto'; font-style: normal; font-weight: 100 900; font-display: swap; src: url(fonts/roboto-latin.woff2) format('woff2'); }
+  /* the app's own colours and type */
+  :root {
+    --background: #ffffff; --foreground: #000000; --primary: #66388F; --muted: #F1F0F0;
+    --muted-foreground: #333333; --border: rgba(102, 56, 143, 0.3); --border-dark: rgba(66, 54, 106, 1);
+    --font-display: 'Oswald', 'Arial Narrow', sans-serif; --font-body: 'Roboto', Arial, sans-serif;
+    /* Toothy's colours: GPM's deep indigo, mid purple, magenta and light */
+    --t-indigo: #42366B; --t-purple: #63388E; --t-magenta: #A0478A; --t-light: #F4F2F8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font: 15px/1.5 var(--font-body); }
+  a { color: inherit; }
+
+  /* what this page is, and the state switch: not part of the app */
+  .intro { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 12px 24px; background: var(--t-light); border-bottom: 2px solid var(--border); }
+  .intro p { margin: 0; font-size: .95rem; }
+  .states { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .states span { font-size: .8rem; color: var(--muted-foreground); }
+  .btn { border: 2px solid var(--border); background: #fff; padding: 6px 12px; font: 500 .85rem var(--font-body); cursor: pointer; min-height: 40px; }
+  .btn[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+  /* a page styled like the app */
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 14px 24px; border-bottom: 2px solid var(--border); }
+  .brand { font: 600 1.1rem var(--font-display); text-transform: uppercase; letter-spacing: .1rem; color: var(--primary); }
+  .top nav { display: flex; gap: 18px; font-size: .9rem; }
+  .top nav a { text-decoration: none; padding: 4px 0; }
+  .top nav a[aria-current] { border-bottom: 2px solid var(--primary); }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 24px 140px; }
+  .crumb { font-size: .75rem; color: var(--muted-foreground); }
+  h1 { font: 400 2.2rem var(--font-display); text-transform: lowercase; margin: .2rem 0 1rem; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .tile { border: 2px solid var(--border); padding: 16px; }
+  .tile h3 { font: 400 1.35rem/1.2 var(--font-display); margin: 0 0 6px; }
+  .tile p { margin: 0; font-size: .8rem; color: var(--muted-foreground); }
+  .bar { height: 6px; background: var(--muted); margin-top: 12px; }
+  .bar span { display: block; height: 100%; background: var(--primary); }
+  .sizes-box { margin-top: 32px; border: 2px dashed var(--border-dark); padding: 16px; background: #fbfaff; }
+  .sizes-box h2 { font: 700 .85rem var(--font-body); text-transform: uppercase; letter-spacing: .1rem; margin: 0 0 8px; }
+  .sizes-box p { margin: 0; font-size: .85rem; }
+  .sizes { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 14px; }
+  .sizes figure { margin: 0; text-align: center; font-size: .75rem; color: var(--muted-foreground); }
+  .sizes .toothy { width: 48px; height: 52px; margin: 0 auto 4px; }
+
+  /* ---- Toothy ---- */
+  .toothy { display: block; width: 100%; height: 100%; overflow: visible; }
+  .toothy .body { animation: bob 3.2s ease-in-out infinite; }
+  .toothy .shadow { transform-box: fill-box; transform-origin: center; animation: shadow 3.2s ease-in-out infinite; }
+  .toothy .lids { transform-box: fill-box; transform-origin: center; animation: blink 4.6s infinite; }
+  .toothy .look, .toothy .arm-r, .toothy .mouth-smile, .toothy .mouth-hmm, .toothy .dots { transition: transform .35s ease, opacity .25s ease; }
+  .toothy .arm-r { transform-box: view-box; transform-origin: 95px 62px; }
+  .toothy .mouth-hmm, .toothy .dots { opacity: 0; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  @keyframes shadow { 0%, 100% { transform: scaleX(1); opacity: .16; } 50% { transform: scaleX(.86); opacity: .1; } }
+  @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.08); } }
+
+  /* waving: the chat has just opened */
+  .t-waving .arm-r { transform: rotate(-110deg); animation: wave .32s ease-in-out infinite alternate; }
+  .t-waving .body { animation: hop .64s ease-in-out infinite alternate; }
+  @keyframes wave { from { transform: rotate(-128deg); } to { transform: rotate(-88deg); } }
+  @keyframes hop { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+  /* thinking: waiting for an answer */
+  .t-thinking .arm-r { transform: rotate(80deg); }
+  .t-thinking .look { transform: translate(2.5px, -3px); }
+  .t-thinking .mouth-smile { opacity: 0; }
+  .t-thinking .mouth-hmm, .t-thinking .dots { opacity: 1; }
+  .t-thinking .dots circle { animation: dot 1.2s ease-in-out infinite; }
+  .t-thinking .dots circle:nth-child(2) { animation-delay: .2s; }
+  .t-thinking .dots circle:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 0%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  /* the poses stay; the movement goes */
+  @media (prefers-reduced-motion: reduce) {
+    .toothy *, .toothy .dots circle { animation: none !important; transition: none !important; }
+  }
+
+  /* ---- the corner: Toothy and the chat ---- */
+  .launcher { position: fixed; right: 20px; bottom: 16px; width: 76px; height: 82px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 20; }
+  .launcher .toothy-slot { display: block; width: 100%; height: 100%; }
+  .launcher:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
+  .launcher .tip { position: absolute; right: 84px; bottom: 30px; white-space: nowrap; background: var(--t-indigo); color: #fff; font-size: .75rem; padding: 4px 8px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .launcher:hover .tip, .launcher:focus-visible .tip { opacity: 1; }
+  .chat { position: fixed; right: 20px; bottom: 108px; width: min(360px, calc(100% - 32px)); max-height: min(520px, calc(100vh - 140px)); display: flex; flex-direction: column; background: #fff; border: 2px solid var(--border-dark); box-shadow: 0 10px 30px rgba(66, 54, 107, .18); z-index: 19; }
+  .chat[hidden] { display: none; }
+  .chat header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; background: var(--t-indigo); color: #fff; }
+  .chat header b { font: 600 1rem var(--font-display); letter-spacing: .05rem; text-transform: uppercase; }
+  .chat header small { display: block; font-size: .72rem; opacity: .85; }
+  .chat header button { background: none; border: 2px solid rgba(255,255,255,.5); color: #fff; min-width: 36px; min-height: 36px; cursor: pointer; font-size: 1rem; }
+  .demo-note { margin: 0; padding: 8px 14px; font-size: .75rem; background: #fff6df; border-bottom: 1px solid #f0dca8; }
+  .log { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 86%; padding: 8px 10px; font-size: .85rem; }
+  .msg.bot { align-self: flex-start; background: var(--t-light); border-left: 4px solid var(--t-purple); }
+  .msg.me { align-self: flex-end; background: var(--primary); color: #fff; }
+  .msg .src { display: block; margin-top: 6px; font-size: .75rem; }
+  .typing { align-self: flex-start; font-size: .8rem; color: var(--muted-foreground); }
+  .chat form { display: flex; gap: 6px; padding: 10px; border-top: 2px solid var(--border); }
+  .chat input { flex: 1; min-width: 0; border: 2px solid var(--border); padding: 8px; font: inherit; font-size: .85rem; }
+  .chat form .btn { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 480px) {
+    .intro, .top { padding-left: 16px; padding-right: 16px; }
+    main { padding-left: 16px; padding-right: 16px; }
+    .launcher { right: 12px; bottom: 10px; width: 60px; height: 65px; }
+    .chat { right: 16px; bottom: 86px; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="intro">
+  <p>Toothy, the help mascot for GPM's Master Client Doc. Concept demo, not live in the tool yet.</p>
+  <div class="states" role="group" aria-label="Show Toothy's states">
+    <span>Show:</span>
+    <button class="btn" type="button" data-state="idle">Idle</button>
+    <button class="btn" type="button" data-state="waving">Waving</button>
+    <button class="btn" type="button" data-state="thinking">Thinking</button>
+  </div>
+</div>
+
+<div class="top">
+  <span class="brand">Master Client Doc</span>
+  <nav aria-label="Main">
+    <a href="#" aria-current="page">Onboardings</a>
+    <a href="#">How-to</a>
+    <a href="#">Activity</a>
+  </nav>
+</div>
+
+<main>
+  <p class="crumb">Onboardings</p>
+  <h1>Client directory</h1>
+  <div class="tiles">
+    <article class="tile"><h3>Example Family Dental</h3><p>Client progress 41 of 68</p><div class="bar"><span style="width:60%"></span></div></article>
+    <article class="tile"><h3>Sample Smile Studio</h3><p>Client progress 12 of 70</p><div class="bar"><span style="width:17%"></span></div></article>
+    <article class="tile"><h3>Demo Dental Group</h3><p>Submitted</p><div class="bar"><span style="width:100%"></span></div></article>
+  </div>
+
+  <section class="sizes-box" aria-labelledby="sizes-h">
+    <h2 id="sizes-h">Toothy at 48 pixels</h2>
+    <p>Press Toothy in the bottom corner to open the chat (Toothy waves), then press Ask (Toothy thinks while it waits). The buttons at the top show each state straight away.</p>
+    <div class="sizes">
+      <figure><div class="toothy-slot" data-state="idle"></div><figcaption>idle</figcaption></figure>
+      <figure><div class="toothy-slot" data-state="waving"></div><figcaption>waving</figcaption></figure>
+      <figure><div class="toothy-slot" data-state="thinking"></div><figcaption>thinking</figcaption></figure>
+    </div>
+  </section>
+</main>
+
+<div class="chat" id="chat" role="dialog" aria-labelledby="chat-title" hidden>
+  <header>
+    <div><b id="chat-title">Toothy</b><small>Answers from the How-to, and nothing else</small></div>
+    <button type="button" id="chat-close" aria-label="Close the help chat">×</button>
+  </header>
+  <p class="demo-note">Demo only: nothing you type leaves this page, and the answer is a fixed sample.</p>
+  <div class="log" id="log" aria-live="polite">
+    <div class="msg bot">Hi, I'm Toothy. Ask me anything the How-to covers: links, rounds, the activity log, archiving.</div>
+  </div>
+  <form id="ask">
+    <label class="sr-only" for="q">Your question</label>
+    <input id="q" autocomplete="off" placeholder="Ask about the tool…" value="How do I start the deferred round?">
+    <button class="btn" type="submit">Ask</button>
+  </form>
+</div>
+
+<button class="launcher" id="launcher" type="button" aria-controls="chat" aria-expanded="false">
+  <span class="tip">Ask Toothy</span>
+  <span class="sr-only">Open the help chat</span>
+  <span class="toothy-slot" data-state="idle" id="corner" aria-hidden="true"></span>
+</button>
+<p class="sr-only" aria-live="polite" id="state-said"></p>
+
+<script>
+  // Toothy, drawn by hand: one SVG, each state a class on it (t-idle, t-waving, t-thinking).
+  const TOOTHY = `
+  <svg class="toothy" viewBox="-6 -16 132 152" xmlns="http://www.w3.org/2000/svg" focusable="false">
+    <ellipse class="shadow" cx="60" cy="127" rx="28" ry="4.5" fill="#42366B" opacity=".16"/>
+    <g class="body">
+      <g class="dots" fill="#63388E">
+        <circle cx="100" cy="14" r="3"/><circle cx="109" cy="3" r="4"/><circle cx="120" cy="-9" r="5"/>
+      </g>
+      <path d="M25 62 Q12 70 14 81" fill="none" stroke="#42366B" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="14" cy="84" r="5.5" fill="#F4F2F8" stroke="#42366B" stroke-width="4"/>
+      <path d="M22 48 C18 26 34 12 48 16 C54 18 58 22 60 22 C62 22 66 18 72 16 C86 12 102 26 98 48 C96 62 92 72 90 84 C88 98 86 112 80 116 C74 120 70 110 68 100 C66 92 54 92 52 100 C50 110 46 120 40 116 C34 112 32 98 30 84 C28 72 24 62 22 48 Z"
+            fill="#F4F2F8" stroke="#42366B" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M32 30 C36 23 42 21 46 22" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <g class="look"><g class="lids">
+        <ellipse cx="47" cy="52" rx="6" ry="8" fill="#42366B"/><ellipse cx="73" cy="52" rx="6" ry="8" fill="#42366B"/>
+        <circle cx="49" cy="49" r="2.2" fill="#fff"/><circle cx="75" cy="49" r="2.2" fill="#fff"/>
+      </g></g>
+      <circle cx="36" cy="66" r="5" fill="#A0478A" opacity=".55"/><circle cx="84" cy="66" r="5" fill="#A0478A" opacity=".55"/>
+      <path class="mouth-smile" d="M51 66 Q60 75 69 66" fill="none" stroke="#42366B" stroke-width="4" stroke-linecap="round"/>
+      <path class="mouth-hmm" d="M54 70 Q60 67.5 66 70" fill="none" stroke="#42366B" stroke-width="4" stroke-linecap="round"/>
+      <polygon points="60,79 66.1,82.5 66.1,89.5 60,93 53.9,89.5 53.9,82.5" fill="#63388E"/>
+      <g class="arm-r">
+        <path d="M95 62 Q108 70 106 81" fill="none" stroke="#42366B" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="106" cy="84" r="5.5" fill="#F4F2F8" stroke="#42366B" stroke-width="4"/>
+      </g>
+    </g>
+  </svg>`;
+
+  for (const slot of document.querySelectorAll(".toothy-slot")) {
+    slot.innerHTML = TOOTHY;
+    slot.querySelector("svg").classList.add(`t-${slot.dataset.state}`);
+  }
+  const corner = document.querySelector("#corner svg");
+  const stateButtons = document.querySelectorAll("button[data-state]");
+  const said = { idle: "", waving: "Toothy waves hello.", thinking: "Toothy is thinking." };
+  // a state chosen with the buttons stays until another is chosen or the chat is used
+  let held = false;
+  let timer = 0;
+
+  function show(state) {
+    corner.classList.remove("t-idle", "t-waving", "t-thinking");
+    corner.classList.add(`t-${state}`);
+    document.body.dataset.toothy = state;
+    for (const b of stateButtons) b.setAttribute("aria-pressed", String(b.dataset.state === state));
+    document.getElementById("state-said").textContent = said[state];
+  }
+  // a state for a while, then back to idle
+  function play(state, ms) {
+    held = false;
+    clearTimeout(timer);
+    show(state);
+    if (ms) timer = setTimeout(() => show("idle"), ms);
+  }
+  for (const b of stateButtons) {
+    b.addEventListener("click", () => {
+      clearTimeout(timer);
+      held = true;
+      show(b.dataset.state);
+    });
+  }
+
+  const chat = document.getElementById("chat");
+  const launcher = document.getElementById("launcher");
+  const input = document.getElementById("q");
+  const log = document.getElementById("log");
+
+  function openChat() {
+    chat.hidden = false;
+    launcher.setAttribute("aria-expanded", "true");
+    play("waving", 1800);
+    input.focus();
+  }
+  function closeChat() {
+    chat.hidden = true;
+    launcher.setAttribute("aria-expanded", "false");
+    if (!held) play("idle");
+    launcher.focus();
+  }
+  launcher.addEventListener("click", () => (chat.hidden ? openChat() : closeChat()));
+  document.getElementById("chat-close").addEventListener("click", closeChat);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !chat.hidden) closeChat(); });
+
+  function say(who, html) {
+    const m = document.createElement("div");
+    m.className = `msg ${who}`;
+    m.innerHTML = html;
+    log.appendChild(m);
+    log.scrollTop = log.scrollHeight;
+    return m;
+  }
+  document.getElementById("ask").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+    say("me", q.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])));
+    input.value = "";
+    const wait = document.createElement("p");
+    wait.className = "typing";
+    wait.textContent = "Toothy is looking in the How-to…";
+    log.appendChild(wait);
+    play("thinking");
+    setTimeout(() => {
+      wait.remove();
+      say("bot", "Open <b>Rounds &amp; scope</b> at the top of the practice page and press <b>Start deferred round</b>, then send the new link yourself. " +
+        "If round 1 isn't submitted yet, it asks first: <b>Start anyway</b> or <b>Cancel</b>." +
+        "<span class=\"src\">From the How-to: Rounds &amp; scope (sample answer)</span>");
+      if (!held) play("idle");
+    }, 3200);
+  });
+
+  show("idle");
+</script>
+</body>
+</html>
